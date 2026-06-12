@@ -316,6 +316,50 @@ body {
 .import-skipped-title { font-size: 0.8rem; color: #fca5a5; font-weight: 600; margin-bottom: 6px; }
 .import-skipped-item { font-size: 0.75rem; color: #94a3b8; padding: 2px 0; }
 
+/* ── Customer entry grid ── */
+.cust-entry-header,
+.cust-entry-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr 1.5fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.cust-entry-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+}
+
+/* ── Dashboard main tabs ── */
+.dashboard-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 4px;
+}
+.dashboard-tab {
+  flex: 1;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.01em;
+}
+.dashboard-tab:hover { color: #e2e8f0; background: #0f172a; }
+.dashboard-tab-active { background: #6366f1 !important; color: #fff !important; }
+
 /* ── Footer ── */
 .app-footer {
   display: flex;

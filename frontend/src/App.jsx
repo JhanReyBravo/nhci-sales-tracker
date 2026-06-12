@@ -7,6 +7,7 @@ import SalesEntryPage from './pages/SalesEntryPage'
 import HistoryPage from './pages/HistoryPage'
 import ProductsPage from './pages/ProductsPage'
 import UsersPage from './pages/UsersPage'
+import CustomerEntryPage from './pages/CustomerEntryPage'
 import './App.css'
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/entry" element={<SalesEntryPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/customer-entry" element={<CustomerEntryPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/users" element={<UsersPage />} />
           </Route>
