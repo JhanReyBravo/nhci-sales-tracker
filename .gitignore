@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Backend env (never commit secrets)
+backend/.env
+backend/.env.*
+!backend/.env.example
