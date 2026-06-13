@@ -94,7 +94,7 @@ export default function DashboardPage() {
   })
   const byCat    = {}
   entries.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + parseFloat(e.total_amount) })
-  const catNames  = Object.keys(byCat).sort((a, b) => byCat[b] - byCat[a])
+  const catNames  = Object.keys(byCat).sort((a, b) => byCat[b] - byCat[a]).slice(0, 10)
   const catTotals = catNames.map(c => byCat[c])
 
   // ── Customer sales computed ───────────────────────────────────
@@ -116,7 +116,7 @@ export default function DashboardPage() {
     const name = e.customer?.name || 'Unknown'
     byCustName[name] = (byCustName[name] || 0) + parseFloat(e.total_amount)
   })
-  const custNames  = Object.keys(byCustName).sort((a, b) => byCustName[b] - byCustName[a])
+  const custNames  = Object.keys(byCustName).sort((a, b) => byCustName[b] - byCustName[a]).slice(0, 10)
   const custTotals = custNames.map(c => byCustName[c])
 
   // ── Chart builders ────────────────────────────────────────────
@@ -323,7 +323,7 @@ export default function DashboardPage() {
             {/* Breakdown chart */}
             {isProduct && catNames.length > 1 && (
               <div className="chart-card" style={{ marginTop: 20 }}>
-                <h2 className="chart-title">Sales by Category</h2>
+                <h2 className="chart-title">Top 10 Categories by Sales</h2>
                 <ReactApexChart options={catBarOptions}
                   series={[{ name: 'Total', data: catTotals }]}
                   type="bar" height={Math.max(250, catNames.length * 40)} />
@@ -332,7 +332,7 @@ export default function DashboardPage() {
 
             {!isProduct && custNames.length > 1 && (
               <div className="chart-card" style={{ marginTop: 20 }}>
-                <h2 className="chart-title">Sales by Customer</h2>
+                <h2 className="chart-title">Top 10 Customers by Sales</h2>
                 <ReactApexChart options={custBarOptions}
                   series={[{ name: 'Total', data: custTotals }]}
                   type="bar" height={Math.max(250, custNames.length * 40)} />
