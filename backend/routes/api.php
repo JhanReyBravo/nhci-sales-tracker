@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\AgentExpenseController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerCsvImportController;
 use App\Http\Controllers\CustomerSalesController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SalesAgentController;
 use App\Http\Controllers\SalesEntryController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +36,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/customer-sales/summary', [CustomerSalesController::class, 'summary']);
     Route::get('/customer-sales/by-customer', [CustomerSalesController::class, 'byCustomer']);
 
+    // Agent expenses
+    Route::get('/sales-agents', [SalesAgentController::class, 'index']);
+    Route::get('/agent-expenses', [AgentExpenseController::class, 'index']);
+    Route::post('/agent-expenses', [AgentExpenseController::class, 'store']);
+    Route::delete('/agent-expenses/{agentExpense}', [AgentExpenseController::class, 'destroy']);
+    Route::get('/agent-expenses/summary', [AgentExpenseController::class, 'summary']);
+    Route::get('/agent-expenses/by-agent', [AgentExpenseController::class, 'byAgent']);
+
     Route::middleware('can:admin')->group(function () {
         // Product CSV import
         Route::post('/import-csv', [CsvImportController::class, 'import']);
@@ -45,6 +55,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::put('/customers/{customer}', [CustomerController::class, 'update']);
         Route::delete('/customers/{customer}', [CustomerController::class, 'destroy']);
+
+        // Sales agent management (admin only)
+        Route::post('/sales-agents', [SalesAgentController::class, 'store']);
+        Route::put('/sales-agents/{salesAgent}', [SalesAgentController::class, 'update']);
+        Route::delete('/sales-agents/{salesAgent}', [SalesAgentController::class, 'destroy']);
 
         // Product management
         Route::post('/products', [ProductController::class, 'store']);
