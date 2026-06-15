@@ -51,9 +51,11 @@ export default function Layout() {
           {navLink('/entry', '➕', 'Sales Entry')}
           {navLink('/history', '📋', 'History')}
           {navLink('/customer-entry', '👤', 'Customer Entry')}
+          {navLink('/agent-expenses', '🚗', 'Agent Expenses')}
           {isAdmin && (
             <>
               <div className="nav-section">Admin</div>
+              {navLink('/agents', '👷', 'Agents')}
               {navLink('/products', '📦', 'Products')}
               {navLink('/users', '👥', 'Users')}
             </>

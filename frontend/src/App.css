@@ -316,6 +316,24 @@ body {
 .import-skipped-title { font-size: 0.8rem; color: #fca5a5; font-weight: 600; margin-bottom: 6px; }
 .import-skipped-item { font-size: 0.75rem; color: #94a3b8; padding: 2px 0; }
 
+/* ── Expense entry grid ── */
+.expense-entry-header,
+.expense-entry-row {
+  display: grid;
+  grid-template-columns: 1.8fr 1.4fr 1.2fr 1.1fr 0.8fr 1.2fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.expense-entry-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+}
+
 /* ── Customer entry grid ── */
 .cust-entry-header,
 .cust-entry-row {

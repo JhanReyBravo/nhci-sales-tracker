@@ -28,7 +28,7 @@ const BASE = {
 
 export default function DashboardPage() {
   const { isAdmin } = useAuth()
-  const [tab, setTab]                       = useState('product') // 'product' | 'customer'
+  const [tab, setTab]                       = useState('product') // 'product' | 'customer' | 'expenses'
   const [view, setView]                     = useState('30')
   const [chartType, setChartType]           = useState('area')
 
@@ -46,15 +46,23 @@ export default function DashboardPage() {
   const [loadingCustomer, setLoadingCustomer] = useState(true)
   const [showCustImport, setShowCustImport] = useState(false)
 
+  // Expenses state
+  const [expEntries, setExpEntries]         = useState([])
+  const [agents, setAgents]                 = useState([])
+  const [selectedAgent, setSelectedAgent]   = useState('all')
+  const [loadingExp, setLoadingExp]         = useState(true)
+
   useEffect(() => {
     api.get('/categories').then(({ data }) => setCategories(data))
     api.get('/customers').then(({ data }) => setCustomers(data))
+    api.get('/sales-agents').then(({ data }) => setAgents(data))
   }, [])
 
   useEffect(() => {
     if (tab === 'product') fetchProductEntries()
-    else fetchCustomerEntries()
-  }, [view, selectedCategory, selectedCustomer, tab])
+    else if (tab === 'customer') fetchCustomerEntries()
+    else fetchExpenseEntries()
+  }, [view, selectedCategory, selectedCustomer, selectedAgent, tab])
 
   async function fetchProductEntries() {
     setLoadingProduct(true)
@@ -65,6 +73,17 @@ export default function DashboardPage() {
     const { data } = await api.get('/sales', { params })
     setEntries(data)
     setLoadingProduct(false)
+  }
+
+  async function fetchExpenseEntries() {
+    setLoadingExp(true)
+    const from = dayjs().subtract(parseInt(view), 'day').format('YYYY-MM-DD')
+    const to   = dayjs().format('YYYY-MM-DD')
+    const params = { from, to }
+    if (selectedAgent !== 'all') params.sales_agent_id = selectedAgent
+    const { data } = await api.get('/agent-expenses', { params })
+    setExpEntries(data)
+    setLoadingExp(false)
   }
 
   async function fetchCustomerEntries() {
@@ -118,6 +137,69 @@ export default function DashboardPage() {
   })
   const custNames  = Object.keys(byCustName).sort((a, b) => byCustName[b] - byCustName[a]).slice(0, 10)
   const custTotals = custNames.map(c => byCustName[c])
+
+  // ── Expense computed ─────────────────────────────────────────
+  const byExpDate = {}
+  const byExpDateFuel = {}
+  expEntries.forEach(e => {
+    byExpDate[e.expense_date]     = (byExpDate[e.expense_date] || 0) + parseFloat(e.allowance_amount)
+    byExpDateFuel[e.expense_date] = (byExpDateFuel[e.expense_date] || 0) + parseFloat(e.fuel_liters || 0)
+  })
+  const expSortedDates  = Object.keys(byExpDate).sort((a, b) => a.localeCompare(b))
+  const expDates        = expSortedDates.map(d => dayjs(d).format('MMM D'))
+  const expAmounts      = expSortedDates.map(d => byExpDate[d])
+  const expFuelAmounts  = expSortedDates.map(d => byExpDateFuel[d])
+  const expTotal        = expAmounts.reduce((a, b) => a + b, 0)
+  const expTotalFuel    = expFuelAmounts.reduce((a, b) => a + b, 0)
+  const expAvg          = expAmounts.length ? expTotal / expAmounts.length : 0
+  const expMax          = expAmounts.length ? Math.max(...expAmounts) : 0
+  const expMaxIdx       = expAmounts.indexOf(expMax)
+
+  const byAgentName = {}
+  const byAgentFuel = {}
+  expEntries.forEach(e => {
+    const name = e.agent?.name || 'Unknown'
+    byAgentName[name] = (byAgentName[name] || 0) + parseFloat(e.allowance_amount)
+    byAgentFuel[name] = (byAgentFuel[name] || 0) + parseFloat(e.fuel_liters || 0)
+  })
+  const agentNames    = Object.keys(byAgentName).sort((a, b) => byAgentName[b] - byAgentName[a]).slice(0, 10)
+  const agentAllowances = agentNames.map(n => byAgentName[n])
+  const agentFuels      = agentNames.map(n => parseFloat(byAgentFuel[n].toFixed(2)))
+
+  const expAllowanceBarOptions = {
+    chart: { type: 'bar', toolbar: { show: false } }, colors: ['#f59e0b'],
+    plotOptions: { bar: { borderRadius: 6, horizontal: true, distributed: true } },
+    dataLabels: { enabled: false }, legend: { show: false },
+    xaxis: { categories: agentNames, labels: { style: { colors: '#94a3b8' }, formatter: FMT } },
+    yaxis: { labels: { style: { colors: '#e2e8f0', fontSize: '12px' } } }, ...BASE,
+  }
+
+  const expFuelBarOptions = {
+    chart: { type: 'bar', toolbar: { show: false } }, colors: ['#06b6d4'],
+    plotOptions: { bar: { borderRadius: 6, horizontal: true, distributed: true } },
+    dataLabels: { enabled: false }, legend: { show: false },
+    xaxis: { categories: agentNames, labels: { style: { colors: '#94a3b8' }, formatter: v => v + ' L' } },
+    yaxis: { labels: { style: { colors: '#e2e8f0', fontSize: '12px' } } },
+    grid: { borderColor: '#1e293b', strokeDashArray: 4 },
+    tooltip: { theme: 'dark', y: { formatter: v => v + ' liters' } },
+  }
+
+  const expTrendOptions = {
+    chart: { type: 'line', toolbar: { show: true }, zoom: { enabled: true } },
+    colors: ['#f59e0b', '#06b6d4'],
+    stroke: { width: [0, 3], curve: 'smooth' },
+    plotOptions: { bar: { borderRadius: 5, columnWidth: '55%' } },
+    dataLabels: { enabled: false },
+    legend: { labels: { colors: '#94a3b8' }, position: 'top' },
+    markers: { size: [0, 4] },
+    xaxis: { categories: expDates, labels: { style: { colors: '#94a3b8' }, rotate: -30 }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: [
+      { labels: { style: { colors: '#94a3b8' }, formatter: FMT } },
+      { opposite: true, labels: { style: { colors: '#06b6d4' }, formatter: v => v + ' L' } },
+    ],
+    grid: { borderColor: '#1e293b', strokeDashArray: 4 },
+    tooltip: { theme: 'dark', shared: true, intersect: false },
+  }
 
   // ── Chart builders ────────────────────────────────────────────
   function buildTrendChart(xDates, xAmounts, xMovingAvg) {
@@ -194,14 +276,16 @@ export default function DashboardPage() {
     yaxis: { labels: { style: { colors: '#e2e8f0', fontSize: '12px' } } }, ...BASE,
   }
 
-  const isProduct  = tab === 'product'
-  const loading    = isProduct ? loadingProduct : loadingCustomer
-  const showDates  = isProduct ? dates : custDates
-  const showTotal  = isProduct ? total : custTotal
-  const showAvg    = isProduct ? avg : custAvg
-  const showMax    = isProduct ? max : custMax
-  const showMaxIdx = isProduct ? maxIdx : custMaxIdx
-  const showChart  = isProduct ? trendChart : custTrendChart
+  const isProduct   = tab === 'product'
+  const isCustomer  = tab === 'customer'
+  const isExpenses  = tab === 'expenses'
+  const loading     = isProduct ? loadingProduct : isCustomer ? loadingCustomer : loadingExp
+  const showDates   = isProduct ? dates : isCustomer ? custDates : expDates
+  const showTotal   = isProduct ? total : isCustomer ? custTotal : expTotal
+  const showAvg     = isProduct ? avg   : isCustomer ? custAvg   : expAvg
+  const showMax     = isProduct ? max   : isCustomer ? custMax   : expMax
+  const showMaxIdx  = isProduct ? maxIdx : isCustomer ? custMaxIdx : expMaxIdx
+  const showChart   = isProduct ? trendChart : custTrendChart
 
   return (
     <>
@@ -236,33 +320,38 @@ export default function DashboardPage() {
 
         {/* ── Main tab navbar ── */}
         <div className="dashboard-tabs">
-          <button
-            className={`dashboard-tab ${isProduct ? 'dashboard-tab-active' : ''}`}
-            onClick={() => setTab('product')}
-          >
+          <button className={`dashboard-tab ${isProduct  ? 'dashboard-tab-active' : ''}`} onClick={() => setTab('product')}>
             📦 Sales per Product
           </button>
-          <button
-            className={`dashboard-tab ${!isProduct ? 'dashboard-tab-active' : ''}`}
-            onClick={() => setTab('customer')}
-          >
+          <button className={`dashboard-tab ${isCustomer ? 'dashboard-tab-active' : ''}`} onClick={() => setTab('customer')}>
             👤 Sales per Customer
+          </button>
+          <button className={`dashboard-tab ${isExpenses ? 'dashboard-tab-active' : ''}`} onClick={() => setTab('expenses')}>
+            🚗 Agent Expenses
           </button>
         </div>
 
         {/* Filter row */}
         <div className="filter-row" style={{ marginBottom: 20 }}>
-          {isProduct ? (
+          {isProduct && (
             <select className="select" style={{ maxWidth: 260 }}
               value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
               <option value="all">All Categories</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-          ) : (
+          )}
+          {isCustomer && (
             <select className="select" style={{ maxWidth: 260 }}
               value={selectedCustomer} onChange={e => setSelectedCustomer(e.target.value)}>
               <option value="all">All Customers</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          {isExpenses && (
+            <select className="select" style={{ maxWidth: 260 }}
+              value={selectedAgent} onChange={e => setSelectedAgent(e.target.value)}>
+              <option value="all">All Agents</option>
+              {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           )}
         </div>
@@ -270,22 +359,24 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="stats-row">
           <div className="stat">
-            <span className="stat-label">Total Sales</span>
+            <span className="stat-label">{isExpenses ? 'Total Allowance' : 'Total Sales'}</span>
             <span className="stat-value">₱{showTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Daily Average</span>
+            <span className="stat-label">{isExpenses ? 'Daily Average' : 'Daily Average'}</span>
             <span className="stat-value">₱{showAvg.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">Best Day</span>
+            <span className="stat-label">{isExpenses ? 'Total Fuel' : 'Best Day'}</span>
             <span className="stat-value">
-              {showDates[showMaxIdx] ? `${showDates[showMaxIdx]} — ₱${showMax.toLocaleString()}` : '—'}
+              {isExpenses
+                ? `${expTotalFuel.toLocaleString(undefined, { minimumFractionDigits: 2 })} L`
+                : showDates[showMaxIdx] ? `${showDates[showMaxIdx]} — ₱${showMax.toLocaleString()}` : '—'}
             </span>
           </div>
           <div className="stat">
             <span className="stat-label">Entries</span>
-            <span className="stat-value">{isProduct ? entries.length : custEntries.length}</span>
+            <span className="stat-value">{isProduct ? entries.length : isCustomer ? custEntries.length : expEntries.length}</span>
           </div>
         </div>
 
@@ -293,11 +384,42 @@ export default function DashboardPage() {
           <div className="page-loading">Loading...</div>
         ) : showDates.length === 0 ? (
           <div className="chart-empty">
-            <p>No sales data for this period.</p>
+            <p>No data for this period.</p>
             <p className="chart-empty-sub">
-              {isProduct ? 'Add entries using Sales Entry.' : 'Import a CSV or add entries manually.'}
+              {isProduct ? 'Add entries using Sales Entry.' : isCustomer ? 'Import a CSV or add customer entries.' : 'Add agent expenses using Agent Expense Entry.'}
             </p>
           </div>
+        ) : isExpenses ? (
+          <>
+            {/* Expense trend — allowance (column) + fuel (line) */}
+            <div className="chart-card">
+              <h2 className="chart-title">Daily Allowance & Fuel Consumption</h2>
+              <ReactApexChart key="exp-trend"
+                options={expTrendOptions}
+                series={[
+                  { name: 'Allowance', type: 'column', data: expAmounts },
+                  { name: 'Fuel (L)',  type: 'line',   data: expFuelAmounts },
+                ]}
+                type="line" height={320} />
+            </div>
+
+            {agentNames.length > 0 && (
+              <>
+                <div className="chart-card" style={{ marginTop: 20 }}>
+                  <h2 className="chart-title">Top 10 Agents by Allowance</h2>
+                  <ReactApexChart options={expAllowanceBarOptions}
+                    series={[{ name: 'Allowance', data: agentAllowances }]}
+                    type="bar" height={400} />
+                </div>
+                <div className="chart-card" style={{ marginTop: 20 }}>
+                  <h2 className="chart-title">Top 10 Agents by Fuel Consumption</h2>
+                  <ReactApexChart options={expFuelBarOptions}
+                    series={[{ name: 'Fuel (L)', data: agentFuels }]}
+                    type="bar" height={400} />
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <>
             {/* Trend chart */}
@@ -320,22 +442,21 @@ export default function DashboardPage() {
                 type={showChart.type} height={320} />
             </div>
 
-            {/* Breakdown chart */}
             {isProduct && catNames.length > 1 && (
               <div className="chart-card" style={{ marginTop: 20 }}>
                 <h2 className="chart-title">Top 10 Categories by Sales</h2>
                 <ReactApexChart options={catBarOptions}
                   series={[{ name: 'Total', data: catTotals }]}
-                  type="bar" height={Math.max(250, catNames.length * 40)} />
+                  type="bar" height={400} />
               </div>
             )}
 
-            {!isProduct && custNames.length > 1 && (
+            {isCustomer && custNames.length > 1 && (
               <div className="chart-card" style={{ marginTop: 20 }}>
                 <h2 className="chart-title">Top 10 Customers by Sales</h2>
                 <ReactApexChart options={custBarOptions}
                   series={[{ name: 'Total', data: custTotals }]}
-                  type="bar" height={Math.max(250, custNames.length * 40)} />
+                  type="bar" height={400} />
               </div>
             )}
           </>
